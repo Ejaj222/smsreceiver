@@ -32,20 +32,33 @@ const io = socketIo(server, {
 });
 
 // Initialize SQLite database
-const db = new sqlite3.Database('sms.db', (err) => {
-  if (err) {
-    console.error('Error opening database:', err);
-  } else {
+let db;
+try {
+  db = new sqlite3.Database('sms.db', (err) => {
+    if (err) {
+      console.error('Error opening database:', err);
+      process.exit(1); // Exit if database connection fails
+    }
     console.log('Connected to SQLite database');
+    
     // Create messages table if it doesn't exist
     db.run(`CREATE TABLE IF NOT EXISTS messages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       sender TEXT NOT NULL,
       content TEXT NOT NULL,
       timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`);
-  }
-});
+    )`, (err) => {
+      if (err) {
+        console.error('Error creating messages table:', err);
+        process.exit(1); // Exit if table creation fails
+      }
+      console.log('Messages table created or already exists');
+    });
+  });
+} catch (error) {
+  console.error('Error initializing database:', error);
+  process.exit(1);
+}
 
 // Middleware
 app.use(cors(corsOptions));
@@ -126,4 +139,20 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log('CORS enabled for all origins');
+});
+
+// Handle process termination
+process.on('SIGINT', () => {
+  if (db) {
+    db.close((err) => {
+      if (err) {
+        console.error('Error closing database:', err);
+      } else {
+        console.log('Database connection closed');
+      }
+      process.exit(0);
+    });
+  } else {
+    process.exit(0);
+  }
 }); 

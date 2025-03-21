@@ -1,0 +1,8 @@
+{
+  "name": "sms-receiver-functions",
+  "version": "1.0.0",
+  "description": "Netlify Functions for SMS Receiver",
+  "dependencies": {
+    "axios": "^1.6.7"
+  }
+} 

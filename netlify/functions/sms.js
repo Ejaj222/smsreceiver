@@ -1,9 +1,7 @@
-const { createClient } = require('@supabase/supabase-js');
+const axios = require('axios');
 
-// Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Get the server URL from environment variables
+const SERVER_URL = process.env.SERVER_URL || 'https://sms-receiver-server.onrender.com';
 
 exports.handler = async function(event, context) {
   // Handle CORS
@@ -34,32 +32,32 @@ exports.handler = async function(event, context) {
         };
       }
 
-      // Insert message into Supabase
-      const { data, error } = await supabase
-        .from('messages')
-        .insert([
-          { sender, content }
-        ])
-        .select();
-
-      if (error) throw error;
+      // Forward request to Express server
+      const response = await axios.post(`${SERVER_URL}/api/sms`, {
+        sender,
+        content
+      });
 
       return {
-        statusCode: 201,
+        statusCode: response.status,
         headers: {
           'Access-Control-Allow-Origin': '*',
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ message: 'Message saved successfully', data })
+        body: JSON.stringify(response.data)
       };
     } catch (error) {
+      console.error('Error forwarding request:', error);
       return {
-        statusCode: 500,
+        statusCode: error.response?.status || 500,
         headers: {
           'Access-Control-Allow-Origin': '*',
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ error: 'Failed to save message' })
+        body: JSON.stringify({ 
+          error: 'Failed to save message',
+          details: error.message
+        })
       };
     }
   }
@@ -67,30 +65,29 @@ exports.handler = async function(event, context) {
   // Handle GET request for messages
   if (event.httpMethod === 'GET') {
     try {
-      const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .order('timestamp', { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
+      // Forward request to Express server
+      const response = await axios.get(`${SERVER_URL}/api/messages`);
 
       return {
-        statusCode: 200,
+        statusCode: response.status,
         headers: {
           'Access-Control-Allow-Origin': '*',
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(response.data)
       };
     } catch (error) {
+      console.error('Error forwarding request:', error);
       return {
-        statusCode: 500,
+        statusCode: error.response?.status || 500,
         headers: {
           'Access-Control-Allow-Origin': '*',
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ error: 'Failed to fetch messages' })
+        body: JSON.stringify({ 
+          error: 'Failed to fetch messages',
+          details: error.message
+        })
       };
     }
   }
