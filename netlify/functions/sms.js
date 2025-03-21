@@ -1,7 +1,7 @@
 const axios = require('axios');
 
-// Get the server URL from environment variables
-const SERVER_URL = process.env.SERVER_URL || 'https://sms-receiver-server.onrender.com';
+// Hardcode the server URL since we can't use environment variables in free tier
+const SERVER_URL = 'https://sms-receiver-server.onrender.com';
 
 exports.handler = async function(event, context) {
   // Handle CORS
