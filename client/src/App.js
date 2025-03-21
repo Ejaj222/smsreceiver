@@ -2,48 +2,81 @@ import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 import './App.css';
 
-const socket = io(process.env.NODE_ENV === 'production' 
-  ? process.env.REACT_APP_SERVER_URL || 'https://your-app-name.netlify.app'
-  : 'http://localhost:5000'
-);
+// Initialize socket connection with error handling
+const getSocket = () => {
+  const serverUrl = process.env.REACT_APP_SERVER_URL || 'http://localhost:5000';
+  console.log('Connecting to server:', serverUrl);
+  return io(serverUrl, {
+    transports: ['websocket'],
+    reconnection: true,
+    reconnectionAttempts: 5,
+    reconnectionDelay: 1000,
+    timeout: 10000
+  });
+};
+
+const socket = getSocket();
 
 function App() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [connected, setConnected] = useState(false);
 
   useEffect(() => {
+    // Socket connection event handlers
+    socket.on('connect', () => {
+      console.log('Connected to server');
+      setConnected(true);
+      setError(null);
+    });
+
+    socket.on('connect_error', (err) => {
+      console.error('Connection error:', err);
+      setError('Failed to connect to server. Please try again later.');
+      setConnected(false);
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log('Disconnected from server:', reason);
+      setConnected(false);
+    });
+
     // Fetch initial messages
     fetchMessages();
 
     // Listen for new messages
     socket.on('newMessage', (message) => {
+      console.log('Received new message:', message);
       setMessages(prevMessages => [message, ...prevMessages]);
     });
 
     // Cleanup on unmount
     return () => {
+      socket.off('connect');
+      socket.off('connect_error');
+      socket.off('disconnect');
       socket.off('newMessage');
     };
   }, []);
 
   const fetchMessages = async () => {
     try {
-      const response = await fetch(
-        process.env.NODE_ENV === 'production'
-          ? `${process.env.REACT_APP_SERVER_URL || 'https://your-app-name.netlify.app'}/api/messages`
-          : 'http://localhost:5000/api/messages'
-      );
+      const serverUrl = process.env.REACT_APP_SERVER_URL || 'http://localhost:5000';
+      console.log('Fetching messages from:', serverUrl);
+      const response = await fetch(`${serverUrl}/api/messages`);
       
       if (!response.ok) {
-        throw new Error('Failed to fetch messages');
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('Fetched messages:', data);
       setMessages(data);
       setLoading(false);
     } catch (err) {
-      setError(err.message);
+      console.error('Error fetching messages:', err);
+      setError('Failed to fetch messages. Please try again later.');
       setLoading(false);
     }
   };
@@ -64,7 +97,10 @@ function App() {
       <div className="App">
         <header className="App-header">
           <h1>SMS Receiver</h1>
-          <p className="error">Error: {error}</p>
+          <p className="error">{error}</p>
+          <button onClick={fetchMessages} className="retry-button">
+            Retry
+          </button>
         </header>
       </div>
     );
@@ -74,6 +110,9 @@ function App() {
     <div className="App">
       <header className="App-header">
         <h1>SMS Receiver</h1>
+        <div className={`connection-status ${connected ? 'connected' : 'disconnected'}`}>
+          {connected ? 'Connected' : 'Disconnected'}
+        </div>
       </header>
       <main className="messages-container">
         {messages.length === 0 ? (
