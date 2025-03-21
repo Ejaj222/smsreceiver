@@ -84,8 +84,8 @@ function App() {
       setLoading(true);
       setError(null);
       
-      // Use Netlify Function endpoint
-      const response = await fetch('/.netlify/functions/sms');
+      // Use the API endpoint directly
+      const response = await fetch('/api/messages');
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
