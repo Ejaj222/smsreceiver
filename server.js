@@ -11,10 +11,11 @@ const server = http.createServer(app);
 
 // CORS configuration
 const corsOptions = {
-  origin: '*', // Allow all origins in development
-  methods: ["GET", "POST"],
+  origin: true, // Allow all origins
+  methods: ["GET", "POST", "OPTIONS"],
   credentials: true,
-  allowedHeaders: ["Content-Type", "Authorization"]
+  allowedHeaders: ["Content-Type", "Authorization", "Accept"],
+  exposedHeaders: ["Content-Range", "X-Content-Range"]
 };
 
 // Initialize Socket.IO with CORS
@@ -23,7 +24,8 @@ const io = socketIo(server, {
   transports: ['websocket', 'polling'],
   pingTimeout: 60000,
   pingInterval: 25000,
-  allowEIO3: true
+  allowEIO3: true,
+  path: '/socket.io/'
 });
 
 // Initialize Supabase client
@@ -37,11 +39,18 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'client/build')));
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', message: 'Server is running' });
+});
+
 // API Routes
 app.post('/api/sms', async (req, res) => {
+  console.log('Received SMS:', req.body);
   const { sender, content } = req.body;
   
   if (!sender || !content) {
+    console.error('Missing required fields:', { sender, content });
     return res.status(400).json({ error: 'Sender and content are required' });
   }
 
@@ -52,8 +61,12 @@ app.post('/api/sms', async (req, res) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
+    }
     
+    console.log('Message saved successfully:', data);
     // Emit new message to all connected clients
     io.emit('newMessage', data);
     
@@ -72,7 +85,10 @@ app.get('/api/messages', async (req, res) => {
       .order('timestamp', { ascending: false })
       .limit(50);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
+    }
     res.json(data);
   } catch (error) {
     console.error('Error fetching messages:', error);

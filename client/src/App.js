@@ -15,7 +15,8 @@ const getSocket = () => {
     timeout: 20000,
     autoConnect: true,
     withCredentials: true,
-    forceNew: true
+    forceNew: true,
+    path: '/socket.io/'
   });
 };
 
@@ -41,7 +42,7 @@ function App() {
 
     socket.on('connect_error', (err) => {
       console.error('Connection error:', err);
-      setError('Failed to connect to server. Please try again later.');
+      setError(`Connection error: ${err.message}`);
       setConnected(false);
     });
 
@@ -73,6 +74,13 @@ function App() {
     try {
       const serverUrl = process.env.REACT_APP_SERVER_URL || 'http://localhost:5000';
       console.log('Fetching messages from:', serverUrl);
+      
+      // First check if server is healthy
+      const healthCheck = await fetch(`${serverUrl}/health`);
+      if (!healthCheck.ok) {
+        throw new Error('Server is not responding');
+      }
+
       const response = await fetch(`${serverUrl}/api/messages`);
       
       if (!response.ok) {
@@ -85,7 +93,7 @@ function App() {
       setLoading(false);
     } catch (err) {
       console.error('Error fetching messages:', err);
-      setError('Failed to fetch messages. Please try again later.');
+      setError(`Failed to fetch messages: ${err.message}`);
       setLoading(false);
     }
   };
