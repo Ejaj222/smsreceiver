@@ -7,16 +7,18 @@ const getSocket = () => {
   const serverUrl = process.env.REACT_APP_SERVER_URL || 'http://localhost:5000';
   console.log('Connecting to server:', serverUrl);
   return io(serverUrl, {
-    transports: ['websocket', 'polling'],
+    transports: ['polling', 'websocket'], // Try polling first, then upgrade to websocket
     reconnection: true,
     reconnectionAttempts: Infinity,
     reconnectionDelay: 1000,
     reconnectionDelayMax: 5000,
-    timeout: 20000,
+    timeout: 45000,
     autoConnect: true,
     withCredentials: true,
     forceNew: true,
-    path: '/socket.io/'
+    path: '/socket.io/',
+    upgrade: true,
+    rememberUpgrade: true
   });
 };
 

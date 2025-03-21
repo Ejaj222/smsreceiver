@@ -21,11 +21,14 @@ const corsOptions = {
 // Initialize Socket.IO with CORS
 const io = socketIo(server, {
   cors: corsOptions,
-  transports: ['websocket', 'polling'],
+  transports: ['polling', 'websocket'], // Try polling first, then upgrade to websocket
   pingTimeout: 60000,
   pingInterval: 25000,
   allowEIO3: true,
-  path: '/socket.io/'
+  path: '/socket.io/',
+  connectTimeout: 45000,
+  maxHttpBufferSize: 1e8,
+  allowUpgrades: true
 });
 
 // Initialize Supabase client
