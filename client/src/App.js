@@ -14,7 +14,8 @@ const getSocket = () => {
     reconnectionDelayMax: 5000,
     timeout: 20000,
     autoConnect: true,
-    withCredentials: true
+    withCredentials: true,
+    forceNew: true
   });
 };
 
@@ -32,6 +33,10 @@ function App() {
       console.log('Connected to server');
       setConnected(true);
       setError(null);
+    });
+
+    socket.on('welcome', (data) => {
+      console.log('Welcome message:', data);
     });
 
     socket.on('connect_error', (err) => {
@@ -57,6 +62,7 @@ function App() {
     // Cleanup on unmount
     return () => {
       socket.off('connect');
+      socket.off('welcome');
       socket.off('connect_error');
       socket.off('disconnect');
       socket.off('newMessage');

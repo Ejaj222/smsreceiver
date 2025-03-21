@@ -11,9 +11,7 @@ const server = http.createServer(app);
 
 // CORS configuration
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? process.env.CLIENT_URL || 'https://sms-receiver.netlify.app'
-    : "http://localhost:3000",
+  origin: '*', // Allow all origins in development
   methods: ["GET", "POST"],
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization"]
@@ -24,7 +22,8 @@ const io = socketIo(server, {
   cors: corsOptions,
   transports: ['websocket', 'polling'],
   pingTimeout: 60000,
-  pingInterval: 25000
+  pingInterval: 25000,
+  allowEIO3: true
 });
 
 // Initialize Supabase client
@@ -85,6 +84,9 @@ app.get('/api/messages', async (req, res) => {
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
   
+  // Send a welcome message to the connected client
+  socket.emit('welcome', { message: 'Connected to server successfully' });
+  
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
   });
@@ -103,5 +105,5 @@ app.get('*', (req, res) => {
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log('CORS enabled for:', corsOptions.origin);
+  console.log('CORS enabled for all origins');
 }); 
