@@ -1,118 +1,98 @@
-# SMS Receiver
+# SMS Receiver Application
 
-A real-time SMS receiver application that displays incoming SMS messages in a modern web interface.
+A real-time SMS receiver application built with Node.js, Express, Socket.IO, and Supabase.
 
 ## Features
 
-- Real-time message updates using Supabase
-- PostgreSQL database for message storage
-- Modern Material-UI interface
-- Serverless API endpoints
+- Real-time message updates using Socket.IO
+- Persistent storage using Supabase
+- Modern React frontend
+- CORS enabled for secure cross-origin requests
 
 ## Prerequisites
 
 - Node.js (v14 or higher)
-- npm (v6 or higher)
-- Netlify account
-- Supabase account
+- npm or yarn
+- A Supabase account and project
 
-## Local Development Setup
+## Setup
 
-1. Install dependencies for the server:
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd sms-receiver
+```
+
+2. Install dependencies:
 ```bash
 npm install
+cd client && npm install
 ```
 
-2. Install dependencies for the client:
-```bash
-cd client
-npm install
-cd ..
+3. Create a `.env` file in the root directory with the following variables:
 ```
-
-3. Create a `.env` file in the root directory:
-```
-SUPABASE_URL=your_supabase_url
+SUPABASE_URL=your_supabase_project_url
 SUPABASE_ANON_KEY=your_supabase_anon_key
+NODE_ENV=development
+PORT=5000
 ```
 
-4. Create a `.env` file in the client directory:
-```
-REACT_APP_SUPABASE_URL=your_supabase_url
-REACT_APP_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
+4. Set up your Supabase database:
+   - Create a new table called `messages` with the following columns:
+     - `id` (uuid, primary key)
+     - `sender` (text)
+     - `content` (text)
+     - `timestamp` (timestamp with timezone, default: now())
 
-## Running Locally
+## Running the Application
 
-1. Start the development server:
+### Development Mode
+
+Run both the server and client in development mode:
 ```bash
 npm run dev:full
 ```
 
-The application will be available at:
-- Frontend: http://localhost:3000
-- API: http://localhost:8888/.netlify/functions/sms
+This will start:
+- Server on http://localhost:5000
+- Client on http://localhost:3000
 
-## Deployment to Netlify
+### Production Mode
 
-1. Create a new account on [Netlify](https://netlify.com)
+1. Build the client:
+```bash
+npm run build
+```
 
-2. Set up Supabase:
-   - Create a new project on [Supabase](https://supabase.com)
-   - Create a new table called `messages` with the following columns:
-     ```sql
-     id: uuid (primary key)
-     sender: text (not null)
-     content: text (not null)
-     timestamp: timestamp with time zone (default: now())
-     ```
-   - Enable real-time subscriptions for the `messages` table
-
-3. Deploy to Netlify:
-   - Connect your GitHub repository to Netlify
-   - Set the following environment variables in Netlify:
-     ```
-     SUPABASE_URL=your_supabase_url
-     SUPABASE_ANON_KEY=your_supabase_anon_key
-     REACT_APP_SUPABASE_URL=your_supabase_url
-     REACT_APP_SUPABASE_ANON_KEY=your_supabase_anon_key
-     ```
-   - Deploy the site
-
-4. Configure the build settings:
-   - Build command: `cd client && npm install && npm run build`
-   - Publish directory: `client/build`
-   - Functions directory: `netlify/functions`
+2. Start the server:
+```bash
+npm start
+```
 
 ## API Endpoints
 
-- `POST /.netlify/functions/sms` - Receive new SMS messages
+- `POST /api/sms`: Create a new message
   ```json
   {
-    "sender": "phone_number",
-    "content": "message_content"
+    "sender": "string",
+    "content": "string"
   }
   ```
 
-- `GET /.netlify/functions/sms` - Retrieve stored messages
+- `GET /api/messages`: Get the last 50 messages
 
-## SMS Forwarder Setup
+## WebSocket Events
 
-1. Install an SMS forwarding app on your Android device (e.g., "SMS Forwarder - Auto Forward")
-2. Configure the app to forward SMS to your Netlify function URL:
-   ```
-   https://your-site-name.netlify.app/.netlify/functions/sms
-   ```
-3. Set the forwarding format to JSON with the following structure:
-   ```json
-   {
-     "sender": "${sender}",
-     "content": "${content}"
-   }
-   ```
+- `newMessage`: Emitted when a new message is received
+  ```json
+  {
+    "id": "uuid",
+    "sender": "string",
+    "content": "string",
+    "timestamp": "ISO date string"
+  }
+  ```
 
-## Development
+## License
 
-- The frontend is built with React and Material-UI
-- The backend uses Netlify Functions and Supabase
-- Real-time updates are handled using Supabase's real-time subscriptions 
+MIT 
