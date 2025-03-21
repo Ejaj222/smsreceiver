@@ -81,19 +81,11 @@ function App() {
 
   const fetchMessages = async () => {
     try {
-      const serverUrl = process.env.REACT_APP_SERVER_URL;
-      if (!serverUrl) {
-        throw new Error('Server URL is not configured');
-      }
-      console.log('Fetching messages from:', serverUrl);
+      setLoading(true);
+      setError(null);
       
-      // First check if server is healthy
-      const healthCheck = await fetch(`${serverUrl}/health`);
-      if (!healthCheck.ok) {
-        throw new Error('Server is not responding');
-      }
-
-      const response = await fetch(`${serverUrl}/api/messages`);
+      // Use Netlify Function endpoint
+      const response = await fetch('/.netlify/functions/sms');
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -102,10 +94,10 @@ function App() {
       const data = await response.json();
       console.log('Fetched messages:', data);
       setMessages(data);
-      setLoading(false);
     } catch (err) {
       console.error('Error fetching messages:', err);
       setError(`Failed to fetch messages: ${err.message}`);
+    } finally {
       setLoading(false);
     }
   };
