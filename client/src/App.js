@@ -5,10 +5,14 @@ import './App.css';
 // Initialize socket connection with error handling
 const getSocket = () => {
   const serverUrl = process.env.REACT_APP_SERVER_URL;
+  console.log('Environment:', process.env.NODE_ENV);
+  console.log('Server URL:', serverUrl);
+  
   if (!serverUrl) {
-    throw new Error('Server URL is not configured');
+    console.error('Server URL is not configured. Environment variables:', process.env);
+    throw new Error('Server URL is not configured. Please check your environment variables.');
   }
-  console.log('Connecting to server:', serverUrl);
+  
   return io(serverUrl, {
     transports: ['polling', 'websocket'],
     reconnection: true,
