@@ -7,11 +7,14 @@ const getSocket = () => {
   const serverUrl = process.env.REACT_APP_SERVER_URL || 'http://localhost:5000';
   console.log('Connecting to server:', serverUrl);
   return io(serverUrl, {
-    transports: ['websocket'],
+    transports: ['websocket', 'polling'],
     reconnection: true,
-    reconnectionAttempts: 5,
+    reconnectionAttempts: Infinity,
     reconnectionDelay: 1000,
-    timeout: 10000
+    reconnectionDelayMax: 5000,
+    timeout: 20000,
+    autoConnect: true,
+    withCredentials: true
   });
 };
 

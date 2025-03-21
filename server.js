@@ -8,13 +8,23 @@ require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
+
+// CORS configuration
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.CLIENT_URL || 'https://sms-receiver.netlify.app'
+    : "http://localhost:3000",
+  methods: ["GET", "POST"],
+  credentials: true,
+  allowedHeaders: ["Content-Type", "Authorization"]
+};
+
+// Initialize Socket.IO with CORS
 const io = socketIo(server, {
-  cors: {
-    origin: process.env.NODE_ENV === 'production' 
-      ? process.env.CLIENT_URL || 'https://your-app-name.netlify.app'
-      : "http://localhost:3000",
-    methods: ["GET", "POST"]
-  }
+  cors: corsOptions,
+  transports: ['websocket', 'polling'],
+  pingTimeout: 60000,
+  pingInterval: 25000
 });
 
 // Initialize Supabase client
@@ -24,11 +34,7 @@ const supabase = createClient(
 );
 
 // Middleware
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? process.env.CLIENT_URL || 'https://your-app-name.netlify.app'
-    : "http://localhost:3000"
-}));
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'client/build')));
 
@@ -77,10 +83,15 @@ app.get('/api/messages', async (req, res) => {
 
 // WebSocket connection handling
 io.on('connection', (socket) => {
-  console.log('Client connected');
+  console.log('Client connected:', socket.id);
   
   socket.on('disconnect', () => {
-    console.log('Client disconnected');
+    console.log('Client disconnected:', socket.id);
+  });
+
+  // Handle errors
+  socket.on('error', (error) => {
+    console.error('Socket error:', error);
   });
 });
 
@@ -92,4 +103,5 @@ app.get('*', (req, res) => {
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log('CORS enabled for:', corsOptions.origin);
 }); 
