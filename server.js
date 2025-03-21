@@ -3,7 +3,7 @@ const cors = require('cors');
 const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
-const { createClient } = require('@supabase/supabase-js');
+const sqlite3 = require('sqlite3').verbose();
 require('dotenv').config();
 
 const app = express();
@@ -21,7 +21,7 @@ const corsOptions = {
 // Initialize Socket.IO with CORS
 const io = socketIo(server, {
   cors: corsOptions,
-  transports: ['polling', 'websocket'], // Try polling first, then upgrade to websocket
+  transports: ['polling', 'websocket'],
   pingTimeout: 60000,
   pingInterval: 25000,
   allowEIO3: true,
@@ -31,11 +31,21 @@ const io = socketIo(server, {
   allowUpgrades: true
 });
 
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-);
+// Initialize SQLite database
+const db = new sqlite3.Database('sms.db', (err) => {
+  if (err) {
+    console.error('Error opening database:', err);
+  } else {
+    console.log('Connected to SQLite database');
+    // Create messages table if it doesn't exist
+    db.run(`CREATE TABLE IF NOT EXISTS messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sender TEXT NOT NULL,
+      content TEXT NOT NULL,
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+  }
+});
 
 // Middleware
 app.use(cors(corsOptions));
@@ -48,7 +58,7 @@ app.get('/health', (req, res) => {
 });
 
 // API Routes
-app.post('/api/sms', async (req, res) => {
+app.post('/api/sms', (req, res) => {
   console.log('Received SMS:', req.body);
   const { sender, content } = req.body;
   
@@ -57,46 +67,37 @@ app.post('/api/sms', async (req, res) => {
     return res.status(400).json({ error: 'Sender and content are required' });
   }
 
-  try {
-    const { data, error } = await supabase
-      .from('messages')
-      .insert([{ sender, content }])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Supabase error:', error);
-      throw error;
+  const query = 'INSERT INTO messages (sender, content) VALUES (?, ?)';
+  db.run(query, [sender, content], function(err) {
+    if (err) {
+      console.error('Error saving message:', err);
+      return res.status(500).json({ error: 'Failed to save message' });
     }
-    
-    console.log('Message saved successfully:', data);
+
+    const message = {
+      id: this.lastID,
+      sender,
+      content,
+      timestamp: new Date().toISOString()
+    };
+
+    console.log('Message saved successfully:', message);
     // Emit new message to all connected clients
-    io.emit('newMessage', data);
+    io.emit('newMessage', message);
     
-    res.status(201).json({ message: 'Message saved successfully', data });
-  } catch (error) {
-    console.error('Error saving message:', error);
-    res.status(500).json({ error: 'Failed to save message' });
-  }
+    res.status(201).json({ message: 'Message saved successfully', data: message });
+  });
 });
 
-app.get('/api/messages', async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*')
-      .order('timestamp', { ascending: false })
-      .limit(50);
-
-    if (error) {
-      console.error('Supabase error:', error);
-      throw error;
+app.get('/api/messages', (req, res) => {
+  const query = 'SELECT * FROM messages ORDER BY timestamp DESC LIMIT 50';
+  db.all(query, [], (err, rows) => {
+    if (err) {
+      console.error('Error fetching messages:', err);
+      return res.status(500).json({ error: 'Failed to fetch messages' });
     }
-    res.json(data);
-  } catch (error) {
-    console.error('Error fetching messages:', error);
-    res.status(500).json({ error: 'Failed to fetch messages' });
-  }
+    res.json(rows);
+  });
 });
 
 // WebSocket connection handling
