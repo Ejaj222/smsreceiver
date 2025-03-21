@@ -4,10 +4,13 @@ import './App.css';
 
 // Initialize socket connection with error handling
 const getSocket = () => {
-  const serverUrl = process.env.REACT_APP_SERVER_URL || 'http://localhost:5000';
+  const serverUrl = process.env.REACT_APP_SERVER_URL;
+  if (!serverUrl) {
+    throw new Error('Server URL is not configured');
+  }
   console.log('Connecting to server:', serverUrl);
   return io(serverUrl, {
-    transports: ['polling', 'websocket'], // Try polling first, then upgrade to websocket
+    transports: ['polling', 'websocket'],
     reconnection: true,
     reconnectionAttempts: Infinity,
     reconnectionDelay: 1000,
@@ -74,7 +77,10 @@ function App() {
 
   const fetchMessages = async () => {
     try {
-      const serverUrl = process.env.REACT_APP_SERVER_URL || 'http://localhost:5000';
+      const serverUrl = process.env.REACT_APP_SERVER_URL;
+      if (!serverUrl) {
+        throw new Error('Server URL is not configured');
+      }
       console.log('Fetching messages from:', serverUrl);
       
       // First check if server is healthy
